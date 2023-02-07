@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import QFileDialog
 from cart_generator import generate_card
 from settings import get_settings
 from utils import assign_subscription_code, resolve_url
+from thread_factory import Thread, ProgressWindow
 
 
 class SettingsMixin:
@@ -45,18 +46,6 @@ class SettingsMixin:
                 self.box_size.setText(str(fields.get('box_size'))) if fields.get('box_size') else '',
         except FileNotFoundError:
             pass
-
-
-class ProgressWindow(QtWidgets.QMainWindow):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.items = None
-        self.progressbar = QtWidgets.QProgressBar(self)
-        self.progressbar.setGeometry(50, 50, 300, 25)
-
-    def set_items(self, items):
-        self.items = items
-        self.progressbar.setRange(0, len(self.items))
 
 
 class MainWindow(QMainWindow, SettingsMixin):
@@ -117,7 +106,7 @@ class MainWindow(QMainWindow, SettingsMixin):
         self.button_uncheck_all.clicked.connect(self.uncheck_all)
 
         self.button_button_print_all = QPushButton('Print', self)
-        self.button_button_print_all.clicked.connect(self.get_checked_items)
+        self.button_button_print_all.clicked.connect(self.print_all)
 
         input_layout = QVBoxLayout()
         input_layout.addWidget(self.table_view)
@@ -139,14 +128,6 @@ class MainWindow(QMainWindow, SettingsMixin):
         self.setCentralWidget(central_widget)
 
         self.load_settings()
-        self.show_progress_window()
-
-    def show_progress_window(self):
-        self.progress_window = ProgressWindow(self)
-        self.progress_window.show()
-        self.progress_window.progressbar.setValue(10)
-        time.sleep(2)
-        self.progress_window.progressbar.setValue(20)
 
     def open_file(self):
         options = QFileDialog.Options()
@@ -175,7 +156,7 @@ class MainWindow(QMainWindow, SettingsMixin):
             item = self.model.item(row, 0)
             item.setCheckState(Qt.Unchecked)
 
-    def get_checked_items(self):
+    def set_checked_items(self):
         checked_items = []
         for row in range(self.model.rowCount()):
             item = self.model.item(row, 0)
@@ -183,21 +164,28 @@ class MainWindow(QMainWindow, SettingsMixin):
                 id = self.model.item(row, 1).text()
                 name = self.model.item(row, 2).text()
                 checked_items.append([id, name])
+        self.users = checked_items
+        
+    
 
-        if checked_items:
-            # self.show_progress_window()
-            st_assign = time.time()
-            self.users = assign_subscription_code(checked_items)
-            print(f"assign:  {time.time() - st_assign}")
-            st_resolve = time.time()
-            self.users = resolve_url(self.users, **get_settings('base_url'))
-            self.progress_window.set_items(self.users)
-            # print(f"resolve:  {time.time() - st_resolve}")
-            # get_st = time.time()
-            # generate_card(self.users, self.progress_window, many=True,
-            #               **get_settings('font_size', 'space_between', 'qr_code_x', 'qr_code_y',
-            #                              'box_size'))
-            # print(f"card:  {time.time() - get_st}")
+    def print_all(self):
+        self.set_checked_items()
+        self.users = assign_subscription_code(self.users)
+        self.users = resolve_url(self.users, **get_settings('base_url'))
+
+        if self.users:
+            self.progress_window = ProgressWindow('Cart Generating', 'Cart Generating')
+            self.thread = Thread(self, self.progress_window)
+            self.thread.set_function(generate_card, self.users, **get_settings('font_size', 'space_between',
+                                                                               'qr_code_x', 'qr_code_y', 'box_size'))
+            self.thread._signal.connect(self.progress_window.signal_accept)
+            self.thread._signal.connect(self.close_progress_window)
+            self.thread.start()
+            self.progress_window.show()
+
+    def close_progress_window(self, msg):
+        if msg >= 100:
+            self.progress_window.close()
 
     def preview(self):
         from PIL import Image

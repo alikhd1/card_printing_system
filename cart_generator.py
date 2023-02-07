@@ -1,3 +1,5 @@
+import os
+
 from PIL import Image, ImageFont, ImageDraw
 from bidi.algorithm import get_display
 import arabic_reshaper
@@ -69,7 +71,9 @@ class CardGenerator:
         self.base_image.save(path)
 
 
-def generate_card(users: list, progress_bar=None, many=False, **kwargs):
+def generate_card(users: list, signal=None, many=False, **kwargs):
+    if not os.path.exists('cards'):
+        os.makedirs('cards')
     if not many:
         users[0] = users
     for i, user in enumerate(users):
@@ -85,7 +89,7 @@ def generate_card(users: list, progress_bar=None, many=False, **kwargs):
         card.paste_qr_code()
         card.add_text(text=user[1], code=user[2])
         card.save(f"cards/{user[2]}.png")
-        if progress_bar:
-            progress_bar.progressbar.setValue(i)
+        if signal:
+            signal.emit((i+1) * 100 / (len(users)))
         if not many:
             return path
