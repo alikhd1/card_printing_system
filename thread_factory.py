@@ -13,8 +13,8 @@ class Thread(QThread):
         self.main_window = main_window
         self.progress_window = progress_window
 
-    # def __del__(self):
-    #     self.wait()
+    def __del__(self):
+        self.wait()
 
     def set_function(self, function, users: list, **kwargs):
         self.function = function
@@ -22,7 +22,7 @@ class Thread(QThread):
         self.settings = kwargs
 
     def run(self):
-        self.function(users=self.users, signal=self._signal, many=True, **self.settings)
+        self.function(users=self.users, signal=self._signal, **self.settings)
 
 
 class ProgressWindow(QMainWindow):

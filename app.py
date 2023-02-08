@@ -165,23 +165,36 @@ class MainWindow(QMainWindow, SettingsMixin):
                 name = self.model.item(row, 2).text()
                 checked_items.append([id, name])
         self.users = checked_items
-        
-    
+
+    def start_process(self, title, info, function, settings={}):
+        self.progress_window = ProgressWindow(title, info)
+        self.thread = Thread(self, self.progress_window)
+        self.thread.set_function(function, self.users, **settings)
+        self.thread._signal.connect(self.progress_window.signal_accept)
+        self.thread._signal.connect(self.close_progress_window)
+        self.thread.finished.connect(self.start_next_process)
+        self.thread.start()
+        self.progress_window.show()
+
+    def start_next_process(self):
+        if self.processes:
+            process = self.processes.pop(0)
+            self.start_process(*process)
+        if not self.thread.isRunning():
+            self.button_button_print_all.setEnabled(True)
 
     def print_all(self):
         self.set_checked_items()
-        self.users = assign_subscription_code(self.users)
-        self.users = resolve_url(self.users, **get_settings('base_url'))
-
         if self.users:
-            self.progress_window = ProgressWindow('Cart Generating', 'Cart Generating')
-            self.thread = Thread(self, self.progress_window)
-            self.thread.set_function(generate_card, self.users, **get_settings('font_size', 'space_between',
-                                                                               'qr_code_x', 'qr_code_y', 'box_size'))
-            self.thread._signal.connect(self.progress_window.signal_accept)
-            self.thread._signal.connect(self.close_progress_window)
-            self.thread.start()
-            self.progress_window.show()
+            self.button_button_print_all.setEnabled(False)
+            self.processes = [
+                ('Check Codes', 'Assigning Subscription Code', assign_subscription_code),
+                ('Resolve Urls', 'Resolving URL', resolve_url, get_settings('base_url')),
+                ('Cards', 'Generating cards', generate_card, get_settings('font_size', 'space_between',
+                                                                         'qr_code_x', 'qr_code_y',
+                                                                         'box_size'))
+            ]
+            self.start_next_process()
 
     def close_progress_window(self, msg):
         if msg >= 100:
@@ -190,7 +203,8 @@ class MainWindow(QMainWindow, SettingsMixin):
     def preview(self):
         from PIL import Image
         user = ['2', 'سید محمدرضا شهرآشوب چهاردانگه اصل', 45418888, 'https://crm.hyprercaspian.com/45418888']
-        card = generate_card(user, **get_settings('font_size', 'space_between', 'qr_code_x', 'qr_code_y', 'box_size'))
+        card = generate_card(user, **get_settings('font_size', 'space_between', 'qr_code_x', 'qr_code_y', 'box_size'),
+                             many=False)
         img = Image.open(card)
         img.show()
 

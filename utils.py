@@ -53,16 +53,20 @@ def save_number(file_path, id):
 file_path = "users.xlsx"
 
 
-def assign_subscription_code(users: list):
+def assign_subscription_code(users: list, signal):
     try:
-        for user in users:
+        for i, user in enumerate(users):
             user += [save_number(file_path, user[0])]
+            if signal:
+                signal.emit((i + 1) * 100 / (len(users)))
     except ValueError as e:
         show_dialog(error=e)
     return users
 
 
-def resolve_url(users: list, base_url):
-    for user in users:
+def resolve_url(users: list, signal, base_url):
+    for i, user in enumerate(users):
         user += [f'{base_url}/{str(user[2])}']
+        if signal:
+            signal.emit((i + 1) * 100 / (len(users)))
     return users

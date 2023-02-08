@@ -71,7 +71,7 @@ class CardGenerator:
         self.base_image.save(path)
 
 
-def generate_card(users: list, signal=None, many=False, **kwargs):
+def generate_card(users: list, signal=None, many=True, **kwargs):
     if not os.path.exists('cards'):
         os.makedirs('cards')
     if not many:
