@@ -173,7 +173,7 @@ class MainWindow(QMainWindow, SettingsMixin):
             if item.checkState() == Qt.Checked:
                 id = self.model.item(row, 1).text()
                 name = self.model.item(row, 2).text()
-                checked_items.append([id, name])
+                checked_items.append({'id': id, 'name': name})
         self.users = checked_items
 
     def start_process(self, title, info, function, settings={}):

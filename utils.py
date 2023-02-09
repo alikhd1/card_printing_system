@@ -32,7 +32,7 @@ def save_number(file_path, id):
         # Check if the given ID already exists in the DataFrame
         if np.isin(id, df["ID"].astype(str).values):
             print("The ID {} already exists.".format(id))
-            return df.loc[df['ID'] == int(id), 'Hashed Code'].iloc[0]
+            return df.loc[df['ID'] == int(id), 'Code'].iloc[0], df.loc[df['ID'] == int(id), 'Hashed Code'].iloc[0]
 
         # Generate a unique random 8-digit number
         generated_number = generate_number(df)
@@ -41,7 +41,8 @@ def save_number(file_path, id):
         hashed_code = hashlib.md5(str(generated_number).encode()).hexdigest()[:16]
 
         # Append the new numbers to the DataFrame
-        df = df.append({'ID': id, 'Code': generated_number, 'Hashed Code': hashed_code}, ignore_index=True)
+        temp_df = pd.DataFrame({'ID': [id], 'Code': [generated_number], 'Hashed Code': [hashed_code]})
+        df = pd.concat([df, temp_df], ignore_index=True)
 
     # Create a new DataFrame if the file does not exist
     else:
@@ -51,7 +52,7 @@ def save_number(file_path, id):
 
     # Save the DataFrame to the Excel file
     df.to_excel(file_path, index=False)
-    return [generated_number, hashed_code]
+    return generated_number, hashed_code
 
 
 # Save a given ID and a generated 8-digit number to the Excel file "users.xlsx"
@@ -61,7 +62,7 @@ file_path = "users.xlsx"
 def assign_subscription_code(users: list, signal):
     try:
         for i, user in enumerate(users):
-            user += [save_number(file_path, user[0])]
+            user['code'], user['hashed_code'] = save_number(file_path, user['id'])
             if signal:
                 signal.emit((i + 1) * 100 / (len(users)))
     except ValueError as e:
@@ -71,7 +72,7 @@ def assign_subscription_code(users: list, signal):
 
 def resolve_url(users: list, signal, base_url):
     for i, user in enumerate(users):
-        user += [f'{base_url}/{str(user[2][1])}']
+        user['url'] = f"{base_url}/{str(user['hashed_code'])}"
         if signal:
             signal.emit((i + 1) * 100 / (len(users)))
     return users
