@@ -1,6 +1,5 @@
 import json
 import sys
-import time
 
 import pandas as pd
 
@@ -26,6 +25,7 @@ class SettingsMixin:
                 'qr_code_x': int(self.qr_code_x.text()) if self.qr_code_x.text() else None,
                 'qr_code_y': int(self.qr_code_y.text()) if self.qr_code_y.text() else None,
                 'box_size': int(self.box_size.text()) if self.box_size.text() else None,
+                'error_correction': int(self.error_correction.currentData()) if self.error_correction.currentData() else None,
             }
         except ValueError:
             QMessageBox.warning(self, "Warning", "Please enter valid values.")
@@ -44,6 +44,8 @@ class SettingsMixin:
                 self.qr_code_x.setText(str(fields.get('qr_code_x'))) if fields.get('qr_code_x') else '',
                 self.qr_code_y.setText(str(fields.get('qr_code_y'))) if fields.get('qr_code_y') else '',
                 self.box_size.setText(str(fields.get('box_size'))) if fields.get('box_size') else '',
+                index = self.error_correction.findData(str(fields.get('error_correction'))) if fields.get('error_correction') else ''
+                self.error_correction.setCurrentIndex(index)
         except FileNotFoundError:
             pass
 
@@ -72,6 +74,13 @@ class MainWindow(QMainWindow, SettingsMixin):
         self.label6 = QtWidgets.QLabel('Box size')
         self.box_size = QtWidgets.QLineEdit()
 
+        self.label7 = QtWidgets.QLabel('Error correction')
+        self.error_correction = QtWidgets.QComboBox()
+        self.error_correction.addItem('L', '1')
+        self.error_correction.addItem('M', '0')
+        self.error_correction.addItem('Q', '3')
+        self.error_correction.addItem('H', '2')
+
         self.button_save_settings = QPushButton('Save', self)
         self.button_save_settings.clicked.connect(self.save_settings)
 
@@ -85,6 +94,7 @@ class MainWindow(QMainWindow, SettingsMixin):
         settings_layout.addRow(self.label4, self.qr_code_x)
         settings_layout.addRow(self.label5, self.qr_code_y)
         settings_layout.addRow(self.label6, self.box_size)
+        settings_layout.addRow(self.label7, self.error_correction)
         settings_layout.addRow(self.button_save_settings)
         settings_layout.addRow(self.button_preview_card)
 
@@ -192,7 +202,7 @@ class MainWindow(QMainWindow, SettingsMixin):
                 ('Resolve Urls', 'Resolving URL', resolve_url, get_settings('base_url')),
                 ('Cards', 'Generating cards', generate_card, get_settings('font_size', 'space_between',
                                                                          'qr_code_x', 'qr_code_y',
-                                                                         'box_size'))
+                                                                         'box_size', 'error_correction'))
             ]
             self.start_next_process()
 
@@ -202,9 +212,9 @@ class MainWindow(QMainWindow, SettingsMixin):
 
     def preview(self):
         from PIL import Image
-        user = ['2', 'سید محمدرضا شهرآشوب چهاردانگه اصل', 45418888, 'https://crm.hyprercaspian.com/45418888']
-        card = generate_card(user, **get_settings('font_size', 'space_between', 'qr_code_x', 'qr_code_y', 'box_size'),
-                             many=False)
+        user = ['2', 'سید محمدرضا شهرآشوب چهاردانگه اصل', [45418888, '86ca44f3b21d5022'], 'https://crm.hyprercaspian.com/45418888']
+        card = generate_card(user, **get_settings('font_size', 'space_between', 'qr_code_x', 'qr_code_y', 'box_size',
+                                                  'error_correction'), many=False)
         img = Image.open(card)
         img.show()
 

@@ -6,6 +6,8 @@ import random
 from dialog import show_dialog
 
 
+import hashlib
+
 def generate_number(df):
     # Generate a random 8-digit number
     number = random.randint(10000000, 99999999)
@@ -15,9 +17,8 @@ def generate_number(df):
         number = generate_number(df)
     return number
 
-
 def save_number(file_path, id):
-    expected_headers = ['ID', 'Code']
+    expected_headers = ['ID', 'Code', 'Hashed Code']
 
     # Load the Excel file into a pandas DataFrame
     if os.path.exists(file_path):
@@ -31,22 +32,26 @@ def save_number(file_path, id):
         # Check if the given ID already exists in the DataFrame
         if np.isin(id, df["ID"].astype(str).values):
             print("The ID {} already exists.".format(id))
-            return df.loc[df['ID'] == int(id), 'Code'].iloc[0]
+            return df.loc[df['ID'] == int(id), 'Hashed Code'].iloc[0]
 
         # Generate a unique random 8-digit number
         generated_number = generate_number(df)
 
+        # Hash the generated code
+        hashed_code = hashlib.md5(str(generated_number).encode()).hexdigest()[:16]
+
         # Append the new numbers to the DataFrame
-        df = df.append({'ID': id, 'Code': generated_number}, ignore_index=True)
+        df = df.append({'ID': id, 'Code': generated_number, 'Hashed Code': hashed_code}, ignore_index=True)
 
     # Create a new DataFrame if the file does not exist
     else:
         generated_number = generate_number(pd.DataFrame({'Code': []}))
-        df = pd.DataFrame({'ID': [id], 'Code': [generated_number]})
+        hashed_code = hashlib.md5(str(generated_number).encode()).hexdigest()[:16]
+        df = pd.DataFrame({'ID': [id], 'Code': [generated_number], 'Hashed Code': [hashed_code]})
 
     # Save the DataFrame to the Excel file
     df.to_excel(file_path, index=False)
-    return generated_number
+    return [generated_number, hashed_code]
 
 
 # Save a given ID and a generated 8-digit number to the Excel file "users.xlsx"
@@ -66,7 +71,7 @@ def assign_subscription_code(users: list, signal):
 
 def resolve_url(users: list, signal, base_url):
     for i, user in enumerate(users):
-        user += [f'{base_url}/{str(user[2])}']
+        user += [f'{base_url}/{str(user[2][1])}']
         if signal:
             signal.emit((i + 1) * 100 / (len(users)))
     return users
