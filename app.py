@@ -44,7 +44,7 @@ class SettingsMixin:
                 self.qr_code_x.setText(str(fields.get('qr_code_x'))) if fields.get('qr_code_x') else '',
                 self.qr_code_y.setText(str(fields.get('qr_code_y'))) if fields.get('qr_code_y') else '',
                 self.box_size.setText(str(fields.get('box_size'))) if fields.get('box_size') else '',
-                index = self.error_correction.findData(str(fields.get('error_correction'))) if fields.get('error_correction') else ''
+                index = self.error_correction.findData(str(fields.get('error_correction')))
                 self.error_correction.setCurrentIndex(index)
         except FileNotFoundError:
             pass
@@ -196,6 +196,7 @@ class MainWindow(QMainWindow, SettingsMixin):
     def print_all(self):
         self.set_checked_items()
         if self.users:
+            print(self.users)
             self.button_button_print_all.setEnabled(False)
             self.processes = [
                 ('Check Codes', 'Assigning Subscription Code', assign_subscription_code),
@@ -212,7 +213,9 @@ class MainWindow(QMainWindow, SettingsMixin):
 
     def preview(self):
         from PIL import Image
-        user = ['2', 'سید محمدرضا شهرآشوب چهاردانگه اصل', [45418888, '86ca44f3b21d5022'], 'https://crm.hyprercaspian.com/45418888']
+        user = [{'id': '2', 'name': 'سید محمدرضا شهرآشوب چهاردانگه اصل', 'code': 45418888,
+                'hashed_code': '86ca44f3b21d5022', 'url': 'https://crm.hypercaspian.com/45418888'}]
+
         card = generate_card(user, **get_settings('font_size', 'space_between', 'qr_code_x', 'qr_code_y', 'box_size',
                                                   'error_correction'), many=False)
         img = Image.open(card)
