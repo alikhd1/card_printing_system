@@ -75,7 +75,6 @@ def generate_card(users: list, signal=None, many=True, **kwargs):
     if not os.path.exists('cards'):
         os.makedirs('cards')
     for i, user in enumerate(users):
-        print(user)
         path = f"cards/{user['code']}.png"
         card = CardGenerator("assets/base_image.png",
                              qrcode_generator(url=user['url'], file_name=user['name'], box_size=kwargs.get('box_size')),
