@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QMessageBox
 
 from thread_factory import ProgressWindow, Thread
 
+from settings import settings_file
 
 class SettingsMixin:
     def save_settings(self):
@@ -25,13 +26,13 @@ class SettingsMixin:
         except ValueError:
             QMessageBox.warning(self, "Warning", "Please enter valid values.")
             return
-        with open('settings.conf', 'w') as f:
+        with open(settings_file, 'w') as f:
             json.dump(fields, f)
         QMessageBox.information(self, "Info", "Values have been saved.")
 
     def load_settings(self):
         try:
-            with open('settings.conf', 'r') as f:
+            with open(settings_file, 'r') as f:
                 fields = json.load(f)
                 self.base_url.setText(fields.get('base_url')) if fields.get('base_url') else '',
                 self.font_size.setText(str(fields.get('font_size'))) if fields.get('font_size') else '',
@@ -73,8 +74,10 @@ class ProcessesMixin:
             process = self.processes.pop(0)
             self.start_process(*process)
         if not self.thread.isRunning():
-            self.print_button.setEnabled(True)
+            self.print_action_button.setEnabled(True)
+            self.show_duplicate_users()
 
     def close_progress_window(self, msg):
         if msg >= 100:
             self.progress_window.close()
+

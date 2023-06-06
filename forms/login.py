@@ -1,8 +1,7 @@
 import requests
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox
+from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QMessageBox
 
 from api import login_almas_user
-from dialog import show_dialog
 from forms.windows import MainWindow
 
 

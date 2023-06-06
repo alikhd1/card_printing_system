@@ -1,12 +1,16 @@
 import os
+from copy import deepcopy
+
 import pandas as pd
 import numpy as np
 import random
 
 from dialog import show_dialog
 
-
 import hashlib
+
+from settings import user_excel_file
+
 
 def generate_number(df):
     # Generate a random 8-digit number
@@ -16,6 +20,7 @@ def generate_number(df):
     if np.isin(number, df["Code"].astype(int).values):
         number = generate_number(df)
     return number
+
 
 def save_number(file_path, id):
     expected_headers = ['ID', 'Code', 'Hashed Code']
@@ -32,7 +37,8 @@ def save_number(file_path, id):
         # Check if the given ID already exists in the DataFrame
         if np.isin(id, df["ID"].astype(str).values):
             print("The ID {} already exists.".format(id))
-            return df.loc[df['ID'] == int(id), 'Code'].iloc[0], df.loc[df['ID'] == int(id), 'Hashed Code'].iloc[0]
+            return df.loc[df['ID'] == int(id), 'Code'].iloc[0], df.loc[df['ID'] == int(id), 'Hashed Code'].iloc[
+                0], False
 
         # Generate a unique random 8-digit number
         generated_number = generate_number(df)
@@ -52,21 +58,31 @@ def save_number(file_path, id):
 
     # Save the DataFrame to the Excel file
     df.to_excel(file_path, index=False)
-    return generated_number, hashed_code
+    return generated_number, hashed_code, True
 
 
-# Save a given ID and a generated 8-digit number to the Excel file "users.xlsx"
-file_path = "users.xlsx"
+def delete_number(codes, file_path=user_excel_file):
+    df = pd.read_excel(file_path, sheet_name=0)
+    for code in codes:
+        df = df.drop(df[df['Code'] == code].index)
+    df.to_excel(file_path, index=False)
+    return df
 
 
 def assign_subscription_code(users: list, signal):
     try:
         for i, user in enumerate(users):
-            user['code'], user['hashed_code'] = save_number(file_path, user['id'])
+            user['code'], user['hashed_code'], user['created'] = save_number(user_excel_file, user['id'])
             if signal:
                 signal.emit((i + 1) * 100 / (len(users)))
     except ValueError as e:
         show_dialog(error=e)
+
+    user = deepcopy(users)
+    users = []
+    for u in user:
+        if u['created']:
+            users.append(u)
     return users
 
 

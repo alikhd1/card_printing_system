@@ -72,12 +72,17 @@ class CardGenerator:
 
 
 def generate_card(users: list, signal=None, many=True, **kwargs):
+    all = len([d for d in users if d['created'] in [True]])
+    if not all:
+        signal.emit(100)
     if not os.path.exists('cards'):
         os.makedirs('cards')
     for i, user in enumerate(users):
+        if not user['created']:
+            continue
         path = f"cards/{user['code']}.png"
         card = CardGenerator("assets/base_image.png",
-                             qrcode_generator(url=user['url'], file_name=user['name'], box_size=kwargs.get('box_size')),
+                             qrcode_generator(url=user['url'], file_name=user['code'], box_size=kwargs.get('box_size')),
                              "assets/Vazirmatn-Regular.ttf",
                              font_size=kwargs.get('font_size'),
                              space_between=kwargs.get('space_between'),
@@ -88,6 +93,6 @@ def generate_card(users: list, signal=None, many=True, **kwargs):
         card.add_text(text=user['name'], code=user['code'])
         card.save(f"cards/{user['code']}.png")
         if signal:
-            signal.emit((i+1) * 100 / (len(users)))
+            signal.emit((i+1) * 100 / all)
         if not many:
             return path

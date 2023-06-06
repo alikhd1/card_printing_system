@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import QMessageBox, QWidget, QLineEdit, QPushButton, QTable
 
 from api import get_user_info
 from cart_generator import generate_card
+from forms.user_table_window import UserTableWindow
 from mixins import SettingsMixin, ProcessesMixin
 from settings import get_settings
 
@@ -102,11 +103,12 @@ class NewTab(QWidget, ProcessesMixin):
         users = []
         for index in self.result_table.selectedIndexes():
             name = f'{self.result_table.model().index(index.row(), 1).data()} {self.result_table.model().index(index.row(), 2).data()}'
-            user = {'id': self.result_table.model().index(index.row(), 0).data(), 'name': name}
+            user = {'id': str(self.result_table.model().index(index.row(), 0).data()), 'name': name}
             users.append(user)
         self.users = users
         if self.users:
             self.print_button.setEnabled(False)
+            self.print_action_button = self.print_button
             self.processes = [
                 ('Check Codes', 'Assigning Subscription Code', assign_subscription_code),
                 ('Resolve Urls', 'Resolving URL', resolve_url, get_settings('base_url')),
@@ -213,6 +215,8 @@ class MainWindow(QMainWindow, SettingsMixin, ProcessesMixin):
 
         self.load_settings()
 
+        self.utw = UserTableWindow()
+
     def open_file(self):
         options = QFileDialog.Options()
         options |= QFileDialog.ReadOnly
@@ -241,17 +245,26 @@ class MainWindow(QMainWindow, SettingsMixin, ProcessesMixin):
             item.setCheckState(Qt.Unchecked)
 
     def print_all(self):
+
         self.set_checked_items()
         if self.users:
             self.button_button_print_all.setEnabled(False)
+            self.print_action_button = self.button_button_print_all
             self.processes = [
                 ('Check Codes', 'Assigning Subscription Code', assign_subscription_code),
                 ('Resolve Urls', 'Resolving URL', resolve_url, get_settings('base_url')),
                 ('Cards', 'Generating cards', generate_card, get_settings('font_size', 'space_between',
                                                                           'qr_code_x', 'qr_code_y',
-                                                                          'box_size', 'error_correction'))
+                                                                          'box_size', 'error_correction')),
+
             ]
             self.start_next_process()
+
+    def show_duplicate_users(self):
+        duplicates = [d for d in self.users if d['created'] in [False]]
+        if duplicates:
+            self.utw.setup_table(duplicates)
+            self.utw.show()
 
     def preview(self):
         from PIL import Image
@@ -262,6 +275,7 @@ class MainWindow(QMainWindow, SettingsMixin, ProcessesMixin):
                                                   'error_correction'), many=False)
         img = Image.open(card)
         img.show()
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
