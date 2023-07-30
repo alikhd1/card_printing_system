@@ -8,6 +8,7 @@ from forms.windows import MainWindow
 class LoginForm(QWidget):
     def __init__(self):
         super().__init__()
+        self.user = None
         self.setWindowTitle("Login Form")
         self.username_label = QLabel("Username:")
         self.username_input = QLineEdit()
@@ -38,11 +39,11 @@ class LoginForm(QWidget):
             user = login_almas_user(username=username, password=password)
         except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout) as e:
             QMessageBox.critical(self, "Error", f"ارتباط با سرور برقرار نمیباشد: {str(e)}")
-
         if user:
+            self.user = user
             self.open_application_window()
 
     def open_application_window(self):
-        self.main_window = MainWindow()
+        self.main_window = MainWindow(is_admin=self.user.get('is_admin', False))
         self.main_window.show()
         self.close()

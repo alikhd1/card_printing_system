@@ -96,3 +96,17 @@ def generate_card(users: list, signal=None, many=True, **kwargs):
             signal.emit((i+1) * 100 / all)
         if not many:
             return path
+
+
+def generate_single_card(user,  **kwargs):
+    card = CardGenerator("assets/base_image.png",
+                         qrcode_generator(url=user['url'], file_name=user['code'], box_size=kwargs.get('box_size')),
+                         "assets/Vazirmatn-Regular.ttf",
+                         font_size=kwargs.get('font_size'),
+                         space_between=kwargs.get('space_between'),
+                         qr_code_x=kwargs.get('qr_code_x'),
+                         qr_code_y=kwargs.get('qr_code_y'),
+                         )
+    card.paste_qr_code()
+    card.add_text(text=user['name'], code=user['code'])
+    card.save(f"cards/{user['code']}.png")

@@ -36,7 +36,7 @@ def save_number(file_path, id):
 
         # Check if the given ID already exists in the DataFrame
         if np.isin(id, df["ID"].astype(str).values):
-            print("The ID {} already exists.".format(id))
+            # print("The ID {} already exists.".format(id))
             return df.loc[df['ID'] == int(id), 'Code'].iloc[0], df.loc[df['ID'] == int(id), 'Hashed Code'].iloc[
                 0], False
 
@@ -69,6 +69,14 @@ def delete_number(codes, file_path=user_excel_file):
     return df
 
 
+def search_hashed_code(sub_code, file_path=user_excel_file):
+    df = pd.read_excel(file_path, sheet_name=0)
+    if np.isin(sub_code, df["ID"].astype(str).values):
+        return df.loc[df['ID'] == int(sub_code), 'ID'].iloc[0],\
+            df.loc[df['ID'] == int(sub_code), 'Code'].iloc[0],\
+            df.loc[df['ID'] == int(sub_code), 'Hashed Code'].iloc[0]
+
+
 def assign_subscription_code(users: list, signal):
     try:
         for i, user in enumerate(users):
@@ -86,7 +94,7 @@ def assign_subscription_code(users: list, signal):
     return users
 
 
-def resolve_url(users: list, signal, base_url):
+def resolve_url(users: list, base_url, signal=None):
     for i, user in enumerate(users):
         user['url'] = f"{base_url}/{str(user['hashed_code'])}"
         if signal:

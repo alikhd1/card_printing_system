@@ -1,3 +1,4 @@
+from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QPushButton, QVBoxLayout, \
     QWidget, QLabel, QMessageBox
@@ -64,6 +65,7 @@ class UserTableWindow(QWidget):
 
     def remove_users(self, users, rows):
         delete_number(users)
+        # TODO bug
         for row in rows:
             self.table.removeRow(row)
 

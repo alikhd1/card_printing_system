@@ -6,15 +6,16 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt, QVariant, QAbstractTableModel
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtWidgets import QMessageBox, QWidget, QLineEdit, QPushButton, QTableView, QRadioButton, QHBoxLayout, \
-    QVBoxLayout, QMainWindow, QFileDialog, QApplication
+    QVBoxLayout, QMainWindow, QFileDialog, QApplication, QLabel
 
 from api import get_user_info
-from cart_generator import generate_card
+from cart_generator import generate_card, generate_single_card
+from dialog import show_dialog
 from forms.user_table_window import UserTableWindow
 from mixins import SettingsMixin, ProcessesMixin
 from settings import get_settings
 
-from utils import assign_subscription_code, resolve_url
+from utils import assign_subscription_code, resolve_url, search_hashed_code
 
 
 class ResultTableModel(QAbstractTableModel):
@@ -74,6 +75,9 @@ class NewTab(QWidget, ProcessesMixin):
         self.submit_button.clicked.connect(self.process_input)
         self.print_button.clicked.connect(self.process_print_button)
 
+        self.utw = UserTableWindow()
+
+
     def process_input(self):
         code = self.text_input.text()
         self.text_input.clear()
@@ -81,6 +85,9 @@ class NewTab(QWidget, ProcessesMixin):
         search_option = None
         if self.radio_name.isChecked():
             search_option = "name"
+            import re
+            arabic_pattern = re.compile(r"\b(\w*?)ی(\w*?)\b")
+            code = arabic_pattern.sub(r"\1ي\2", code)
         elif self.radio_phone_number.isChecked():
             search_option = "phone_number"
         elif self.radio_sub_code.isChecked():
@@ -89,7 +96,7 @@ class NewTab(QWidget, ProcessesMixin):
         if search_option:
             data = None
             try:
-                data = get_user_info(param={search_option: code})
+                data = get_user_info(param={search_option: code}, many=True)
             except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout) as e:
                 self.result_table.setModel(None)  # Clear the model in case of error
                 QMessageBox.critical(self, "Error", f"ارتباط با سرور برقرار نمیباشد: {str(e)}")
@@ -98,6 +105,12 @@ class NewTab(QWidget, ProcessesMixin):
                 header = ['Code', 'Nam', 'Family', 'Mobile']
                 model = ResultTableModel(data, header)
                 self.result_table.setModel(model)
+
+    def show_duplicate_users(self):
+        duplicates = [d for d in self.users if d['created'] in [False]]
+        if duplicates:
+            self.utw.setup_table(duplicates)
+            self.utw.show()
 
     def process_print_button(self):
         users = []
@@ -119,8 +132,42 @@ class NewTab(QWidget, ProcessesMixin):
             self.start_next_process()
 
 
-class MainWindow(QMainWindow, SettingsMixin, ProcessesMixin):
+class CardRecovery(QWidget):
     def __init__(self):
+        super().__init__()
+        self.search_label = QLabel('کد اشتراک:')
+        self.search_input = QLineEdit()
+        self.search_button = QPushButton('جستجو')
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.search_label)
+        layout.addWidget(self.search_input)
+        layout.addWidget(self.search_button)
+        layout.addStretch()
+
+        self.setLayout(layout)
+        self.setLayoutDirection(Qt.RightToLeft)
+
+        self.search_input.returnPressed.connect(self.search_in_excel_file)
+        self.search_button.clicked.connect(self.search_in_excel_file)
+
+    def search_in_excel_file(self):
+        data = search_hashed_code(self.search_input.text())
+        if data:
+            user = {'code': data[1], 'hashed_code': data[2]}
+            resolve_url([user], **get_settings('base_url'))
+            info = get_user_info({'sub_code': data[0]})
+            user['name'] = f"{info['Nam']} {info['Family']}"
+            generate_single_card(user, **get_settings('font_size', 'space_between', 'qr_code_x', 'qr_code_y',
+                                                      'box_size', 'error_correction'))
+            show_dialog(msg='با موفقیت بازیابی شد', icon=1)
+            return
+        self.search_input.clear()
+        show_dialog(msg='کاربر یافت نشد!')
+
+
+class MainWindow(QMainWindow, SettingsMixin, ProcessesMixin):
+    def __init__(self, is_admin):
         super().__init__()
 
         # settings
@@ -210,6 +257,10 @@ class MainWindow(QMainWindow, SettingsMixin, ProcessesMixin):
 
         tab3 = NewTab()
         central_widget.addTab(tab3, "Users")
+
+        if is_admin:
+            tab4 = CardRecovery()
+            central_widget.addTab(tab4, "Card Recovery")
 
         self.setCentralWidget(central_widget)
 
