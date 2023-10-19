@@ -4,6 +4,7 @@ import os
 cwd = os.getcwd()
 user_excel_file = os.path.join(cwd, 'users.xlsx')
 settings_file = os.path.join(cwd, 'settings.conf')
+database = os.path.join(cwd, 'asemoon.db')
 
 
 def get_settings(*args):

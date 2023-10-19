@@ -4,4 +4,5 @@ build
 cards
 qr
 .idea
-users.xlsx
+asemoon.db
+myapp.log

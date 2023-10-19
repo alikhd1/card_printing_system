@@ -7,15 +7,23 @@ from PyQt5.QtCore import Qt, QVariant, QAbstractTableModel
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtWidgets import QMessageBox, QWidget, QLineEdit, QPushButton, QTableView, QRadioButton, QHBoxLayout, \
     QVBoxLayout, QMainWindow, QFileDialog, QApplication, QLabel
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from api import get_user_info
 from cart_generator import generate_card, generate_single_card
 from dialog import show_dialog
 from forms.user_table_window import UserTableWindow
 from mixins import SettingsMixin, ProcessesMixin
-from settings import get_settings
+from models import Base, Users
+from settings import get_settings, database
 
-from utils import assign_subscription_code, resolve_url, search_hashed_code
+
+engine = create_engine(f'sqlite:///{database}')
+Base.metadata.create_all(bind=engine)
+
+session = sessionmaker(bind=engine)
+SESSION = session()
 
 
 class ResultTableModel(QAbstractTableModel):
@@ -77,7 +85,6 @@ class NewTab(QWidget, ProcessesMixin):
 
         self.utw = UserTableWindow()
 
-
     def process_input(self):
         code = self.text_input.text()
         self.text_input.clear()
@@ -123,8 +130,8 @@ class NewTab(QWidget, ProcessesMixin):
             self.print_button.setEnabled(False)
             self.print_action_button = self.print_button
             self.processes = [
-                ('Check Codes', 'Assigning Subscription Code', assign_subscription_code),
-                ('Resolve Urls', 'Resolving URL', resolve_url, get_settings('base_url')),
+                ('Check Codes', 'Assigning Subscription Code', Users.assign_subscription_code),
+                ('Resolve Urls', 'Resolving URL', Users.resolve_url, get_settings('base_url')),
                 ('Cards', 'Generating cards', generate_card, get_settings('font_size', 'space_between',
                                                                           'qr_code_x', 'qr_code_y',
                                                                           'box_size', 'error_correction'))
@@ -152,10 +159,10 @@ class CardRecovery(QWidget):
         self.search_button.clicked.connect(self.search_in_excel_file)
 
     def search_in_excel_file(self):
-        data = search_hashed_code(self.search_input.text())
+        data = Users.exists_by_almas_id(SESSION, self.search_input.text())
         if data:
             user = {'code': data[1], 'hashed_code': data[2]}
-            resolve_url([user], **get_settings('base_url'))
+            Users.resolve_url([user], **get_settings('base_url'))
             info = get_user_info({'sub_code': data[0]})
             user['name'] = f"{info['Nam']} {info['Family']}"
             generate_single_card(user, **get_settings('font_size', 'space_between', 'qr_code_x', 'qr_code_y',
@@ -302,8 +309,8 @@ class MainWindow(QMainWindow, SettingsMixin, ProcessesMixin):
             self.button_button_print_all.setEnabled(False)
             self.print_action_button = self.button_button_print_all
             self.processes = [
-                ('Check Codes', 'Assigning Subscription Code', assign_subscription_code),
-                ('Resolve Urls', 'Resolving URL', resolve_url, get_settings('base_url')),
+                ('Check Codes', 'Assigning Subscription Code', Users.assign_subscription_code),
+                ('Resolve Urls', 'Resolving URL', Users.resolve_url, get_settings('base_url')),
                 ('Cards', 'Generating cards', generate_card, get_settings('font_size', 'space_between',
                                                                           'qr_code_x', 'qr_code_y',
                                                                           'box_size', 'error_correction')),
@@ -326,10 +333,3 @@ class MainWindow(QMainWindow, SettingsMixin, ProcessesMixin):
                                                   'error_correction'), many=False)
         img = Image.open(card)
         img.show()
-
-
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec_())

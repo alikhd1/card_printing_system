@@ -3,7 +3,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QPushButton, QVBoxLayout, \
     QWidget, QLabel, QMessageBox
 
-from utils import delete_number
+from models import Users
 
 
 class UserTableWindow(QWidget):
@@ -64,7 +64,7 @@ class UserTableWindow(QWidget):
                 self.remove_users(codes, selected_rows)
 
     def remove_users(self, users, rows):
-        delete_number(users)
+        Users.delete_numbers(users)
         # TODO bug
         for row in rows:
             self.table.removeRow(row)
